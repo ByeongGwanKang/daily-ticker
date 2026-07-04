@@ -115,10 +115,20 @@ async function main() {
         console.log(`4️⃣ Fetching Latest News...`);
         let stockNews = [];
         try {
-            const searchResult = await yahooFinance.search(ticker, {
-                newsCount: 5,
-                validateResult: false
-            }); if (searchResult.news && searchResult.news.length > 0) {
+            let searchResult;
+            try {
+                searchResult = await yahooFinance.search(ticker, { newsCount: 5 });
+            } catch (error) {
+                // 스키마 검증 에러(FailedYahooValidationError)가 발생하더라도 데이터 강제 추출
+                if (error.name === 'FailedYahooValidationError' || error.result) {
+                    console.log("   ⚠️ Schema validation failed, but forcing data extraction...");
+                    searchResult = error.result;
+                } else {
+                    console.error("   ❌ Yahoo Search Error:", error.message);
+                    searchResult = { quotes: [], news: [] }; // 치명적 에러 시 빈 배열로 처리하여 스크립트 강제 중단 방지
+                }
+            }
+            if (searchResult.news && searchResult.news.length > 0) {
                 stockNews = searchResult.news.map(item => {
                     let dateStr = today;
                     if (item.providerPublishTime) {
